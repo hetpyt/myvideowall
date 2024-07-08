@@ -3,6 +3,7 @@ import cv2
 import tkinter as TK
 import PIL.Image, PIL.ImageTk
 import threading
+import platform
 
 from config import SOURCES
 # # RTSP
@@ -181,7 +182,10 @@ class App:
     def __init__(self, window, title='App') -> None:
         self.window : TK.Tk = window
         self.window.title(title)
-        self.window.state('zoomed')
+        if platform.system() == 'Windows':
+            self.window.state('zoomed')
+        else:
+            self.window.attributes('-zoomed', True)
         self.window.protocol("WM_DELETE_WINDOW", self.onWindowClose)
         self.window.configure(padx=0, pady=0, bd=0)
         self.canvases = []
@@ -212,11 +216,12 @@ class App:
         return url
 
     def onWindowClose(self):
-        print('windows close')
+        print('window close')
         while len(self.canvases):
             cnv = self.canvases.pop()
             del cnv
         self.window.destroy()
+        quit(0)
 
     def addChannel(self, source):
         cnv = VideoCanvas(self.window, source, connect=False)
