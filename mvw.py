@@ -56,11 +56,13 @@ class VideoStream(threading.Thread):
                 return self.ret, cv2.resize(self.frame, dsize)
         return self.ret, self.frame
 
-    def _stop(self, wait=True):
+    def _sstop(self, wait=True):
+        #self.log('stop begin')
         self.stopped = True
         if wait == True:
             while self.is_alive():
                 pass
+        #self.log('stop end')
 
     def _open(self):
         if self.cap is None:
@@ -80,10 +82,15 @@ class VideoStream(threading.Thread):
         self._release()
         self._open()
 
-    def run(self):
+    def start(self):
         self.stopped = False
+        super().start()
+
+    def run(self):
+        #self.stopped = False
         self.log("graber started")
         while(not self.stopped):
+
             if self.cap is None:
                 self.log('Open from source')
                 self._open()
@@ -105,7 +112,7 @@ class VideoStream(threading.Thread):
         self.log('graber stopped')
 
     def __del__(self):
-        self._stop()
+        self._sstop()
         self._release()
         self.log('destroyed')
 
@@ -122,6 +129,8 @@ class VideoCanvas:
         self.parent = parent
         self.photo = None
 
+        self.deleted = False
+
         self.width = width
         self.height = height
 
@@ -137,6 +146,8 @@ class VideoCanvas:
         self.canvas.grid(row=grid_row, column=grid_col)
 
     def __del__(self):
+        print('canvas destroyed')
+        self.deleted = True
         self._disconnect()
         self.canvas.destroy()
 
@@ -148,8 +159,9 @@ class VideoCanvas:
 
     def _disconnect(self):
         if self.video_source is not None:
-            del self.video_source
-            self.video_source = None
+            self.video_source.__del__()
+        del self.video_source
+        #self.video_source = None
 
     def setGrid(self, grid_row=0, grid_col=0):
         self.canvas.grid(row=grid_row, column=grid_col, padx=0, pady=0, ipadx=0, ipady=0, sticky='nw')
@@ -160,6 +172,8 @@ class VideoCanvas:
         self.canvas.configure(width=self.width, height=self.height)
 
     def update(self):
+        if self.deleted:
+            return
 
         if self.video_source is None:
             self._connect()
@@ -193,6 +207,7 @@ class App:
         self.rows = 1
         self.columns = 1
 
+        self.closed = False
         self.initialized = False
 
         self.screen_width = self.window.winfo_screenwidth()
@@ -217,11 +232,13 @@ class App:
 
     def onWindowClose(self):
         print('window close')
+        self.closed = True
         while len(self.canvases):
             cnv = self.canvases.pop()
             del cnv
         self.window.destroy()
-        quit(0)
+        print('quit')
+        #self.window.quit()
 
     def addChannel(self, source):
         cnv = VideoCanvas(self.window, source, connect=False)
@@ -233,8 +250,8 @@ class App:
             self.rows = 2
             self.columns = 2
         elif len(self.canvases) < 7:
-            self.rows = 3
-            self.columns = 2
+            self.rows = 2
+            self.columns = 3
         elif len(self.canvases) < 10:
             self.rows = 3
             self.columns = 3
@@ -248,8 +265,8 @@ class App:
                 c = 0
                 r += 1
 
-        cnv_width = floor(self.window.winfo_width() / self.rows)
-        cnv_height = floor(self.window.winfo_height() / self.columns)
+        cnv_width = floor(self.window.winfo_width() / self.columns)
+        cnv_height = floor(self.window.winfo_height() / self.rows)
         for cnv in self.canvases:
             cnv.setSize(cnv_width, cnv_height)
         print('ww={}, wh={}', self.window.winfo_width(), self.window.winfo_height())
@@ -260,6 +277,8 @@ class App:
         self.window.mainloop()
 
     def update(self):
+        if self.closed:
+            return
         #print(wnd_state)
         if not self.initialized:
             if self.window.winfo_viewable() == 1:
