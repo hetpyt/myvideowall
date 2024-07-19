@@ -243,18 +243,13 @@ class App:
     def addChannel(self, source):
         cnv = VideoCanvas(self.window, source, connect=False)
         self.canvases.append(cnv)
-        if len(self.canvases) < 3:
-            self.rows = 1
-            self.columns = 2
-        elif len(self.canvases) < 5:
-            self.rows = 2
-            self.columns = 2
-        elif len(self.canvases) < 7:
-            self.rows = 2
-            self.columns = 3
-        elif len(self.canvases) < 10:
-            self.rows = 3
-            self.columns = 3
+        self.rows = 1
+        self.columns = 1
+        while (self.rows * self.columns < len(self.canvases)):
+            if self.columns > self.rows:
+                self.rows += 1
+            else:
+                self.columns += 1
         
         r = 0
         c = 0
